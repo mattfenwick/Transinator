@@ -1,5 +1,5 @@
-{-# LANGUAGE UndecidableInstances #-}
-module Datums (
+{-# LANGUAGE UndecidableInstances, FunctionalDependencies #-}
+module Datums.Transformers (
 
     Id(..)
   

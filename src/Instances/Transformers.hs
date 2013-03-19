@@ -1,5 +1,5 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
-module Instances (
+module Instances.Transformers (
   
 ) where
 

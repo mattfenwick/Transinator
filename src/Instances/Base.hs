@@ -1,8 +1,9 @@
-module BaseInstances (
+module Instances.Base (
   
 ) where
 
-import Classes              
+import Datums.Transformers
+import Classes.Base
 
 
 
@@ -33,15 +34,19 @@ instance Monad' Maybe where
   
   
   
-instance Pointed Either where
+instance Functor (Either e) where
+  fmap f (Right x) = Right (f x)
+  fmap _ (Left e)  = Left e
+  
+instance Pointed (Either e) where
   pure = Right
   
-instance Applicative' Either where
+instance Applicative' (Either e) where
   Right f <*> Right x = Right (f x)
   Left e1 <*>   _     = Left e1
   _       <*> Left e2 = Left e2
   
-instance Monad' EIther where
+instance Monad' (Either e) where
   join (Right (Right x))  =  Right x
   join (Right (Left e1))  =  Left e1
   join (Left e2)          =  Left e2

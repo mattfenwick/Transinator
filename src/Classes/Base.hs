@@ -1,4 +1,4 @@
-module Classes (
+module Classes.Base (
   
     Pointed
   , pure
