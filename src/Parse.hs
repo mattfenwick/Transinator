@@ -5,26 +5,26 @@ module Parse (
 ) where
 
 
-import Classes
-import Transformers
-import Instances
-import Control.Applicative     (Applicative(..), liftA, liftA2)
-import Control.Monad           (MonadPlus(..), guard, liftM)
+import Datums.Transformers
+import Classes.Base
+import Classes.Transformers
+import Instances.Base
+import Instances.Transformers
 
 
-(<+>) = mplus
-
-item :: (MonadPlus m, TState [t] m) => m t
+-- item :: (MonadPlus m, TState [t] m) => m t
+item :: (TMaybe m, TState [t] m) => m t
 item = 
-    get >>= \xs -> case xs of
-                        (t:ts) -> put ts >> return t;
-                        []     -> mzero;
+    get >>== \xs -> case xs of
+                         (t:ts) -> put ts *> pure t;
+                         []     -> mzero;
 
-check :: MonadPlus m => (a -> Bool) -> m a -> m a
+{-
+-- check :: ???
 check f p =
-    p            >>= \x ->
-    guard (f x)  >>
-    return x
+    p            >>== \x ->
+    guard (f x)  *>
+    pure x
 
 satisfy :: (MonadPlus m, TState [t] m) => (t -> Bool) -> m t
 satisfy p = check p item
@@ -68,4 +68,4 @@ pnone xs = satisfy (\x -> not $ elem x xs)
 
 string :: (Eq a, MonadState [a] f, AZero' f) => [a] -> f [a]
 string = commute . map literal
--}
+-} -}

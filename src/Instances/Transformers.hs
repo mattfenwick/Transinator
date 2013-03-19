@@ -1,86 +1,76 @@
-{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE 
+             FlexibleInstances
+           , MultiParamTypeClasses
+           , UndecidableInstances #-}
+
 module Instances.Transformers (
   
 ) where
 
-import Transformers         (Id(..), MaybeT(..), ErrorT(..), StateT(..))
-import Classes              
-
--- Functor
-
-instance Functor Id where
-  fmap f (Id x) = Id (f x)
-
-instance Monad m => Functor (MaybeT m) where
-  fmap = 
-
-instance Monad m => Functor (ErrorT e m) where
-  fmap = liftM
-  
-instance Monad m => Functor (StateT s m) where
-  fmap = liftM
+import Datums.Transformers
+import Classes.Base
+import Classes.Transformers
+import Instances.Base
 
 
--- Applicative 
 
-app :: Monad m => m (a -> b) -> m a -> m b
-app = liftM2 ($)
+-- monad transformer instances
 
-instance Applicative Id where
-  pure  = return
-  (<*>) = app
-  
-instance Monad m => Applicative (MaybeT m) where
-  pure  = return
-  (<*>) = app
-  
-instance Monad m => Applicative (ErrorT e m) where
-  pure  = return
-  (<*>) = app
-  
-instance Monad m => Applicative (StateT s m) where
-  pure  = return
-  (<*>) = app
+instance Trans MaybeT m where
+  -- m a -> m (Maybe a)
+  lift m = MaybeT (fmap Just m)
 
--- MonadPlus
+instance Trans (StateT s) m where
+  -- m a -> (s -> m (s, a))
+  lift m = StateT (\s -> fmap ((,) s) m)
 
-instance Monad m => MonadPlus (MaybeT m) where
-  mzero = MaybeT (return Nothing)
-  mplus (MaybeT m) (MaybeT n)  =  MaybeT o
-    where o = m >>= \x -> case x of
-                               Nothing -> n;
-                               Just _  -> return x;
+instance Trans (ErrorT e) m where
+  -- m a -> m (Error e a)
+  lift m = ErrorT (fmap Right m)
 
-instance MonadPlus m => MonadPlus (StateT s m) where
-  mzero = StateT (const mzero)
-  mplus (StateT f) (StateT g) = StateT (\s -> f s `mplus` g s)
 
   
--- Traversable
+-- TMaybe instances
 
-instance Foldable (MaybeT m) where
-  --    
-  foldr = error "oops -- undefined!"
+instance Monad' m => TMaybe (MaybeT m) where
+  mzero = MaybeT (pure Nothing)
 
-instance (Monad m, Traversable m) => Traversable (MaybeT m) where
-  -- based on:     fmap f (MaybeT x) = MaybeT (fmap (fmap f) x)
-  traverse f (MaybeT x)  =  pure MaybeT  <*>  traverse (traverse f) x
+instance TMaybe m => TMaybe (StateT s m) where
+  mzero = lift mzero
 
--- Switch
+instance TMaybe m => TMaybe (ErrorT e m) where
+  mzero = lift mzero
 
-instance Switch Maybe where
-  switch (Just _) = Nothing
-  switch Nothing  = Just ()
-  
-instance Monad m => Switch (MaybeT m) where
-  -- MaybeT m a -> MaybeT m ()
-  -- m (Maybe a) -> m (Maybe ())
-  switch (MaybeT m) = MaybeT (liftM switch m)
 
-instance (Switch m, Monad m) => Switch (StateT s m) where
-  -- StateT s m a -> StateT s m ()
-  -- (s -> m (s, a)) -> s -> m (s, ())
-  switch (StateT f) = StateT g
+-- TState instances
+
+instance Monad' m => TState s (StateT s m) where
+  get = StateT (\s -> pure (s, s))
+  put s = StateT (\_ -> pure (s, ()))
+
+instance TState s m => TState s (MaybeT m) where
+  get = lift get
+  put = lift . put
+
+instance TState s m => TState s (ErrorT e m) where
+  get = lift get
+  put = lift . put
+
+
+-- TError instances
+
+instance Monad' m => TError e (ErrorT e m) where
+  throwE = ErrorT . pure . Left
+  catchE err f = ErrorT (getErrorT err >>== g)
     where
-      g s = switch (f s)    >> 
-            return (s, ())
+      g (Left e) = getErrorT (f e)
+      g (Right z) = pure (Right z)
+
+instance TError e m => TError e (MaybeT m) where
+  throwE = lift . throwE
+  catchE m f = MaybeT $ catchE (getMaybeT m) (getMaybeT . f)
+
+instance TError e m => TError e (StateT s m) where
+  throwE = lift . throwE
+  catchE m f = StateT (\s -> catchE (getStateT m s) (\e -> getStateT (f e) s))
+
