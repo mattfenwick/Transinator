@@ -1,4 +1,3 @@
--- {-# LANGUAGE FlexibleInstances, UndecidableInstances #-}
 module Instances.Base (
   
 ) where
@@ -6,12 +5,6 @@ module Instances.Base (
 import Datums.Transformers
 import Classes.Base
 
-
-
-{-
-instance Monad' f => Functor f where
-  fmap f m = m >>== (pure . f)
--}
 
 
 instance Functor Id where
@@ -76,6 +69,16 @@ instance Monad' (Either e) where
 instance Traversable' (Either e) where
   traverse f (Right x) = pure Right <*> f x
   traverse _ (Left e)  = pure (Left e)
+  
+  
+  
+instance Pointed [] where
+  pure = (:[])
+
+instance Traversable' [] where
+  -- fmap f (x:xs) = f x : fmap f xs
+  traverse f [] = pure []
+  traverse f (x:xs) = pure (:) <*> f x <*> traverse f xs
 
 
 
@@ -107,6 +110,7 @@ instance Monad' m => Monad' (StateT s m) where
           v1 s1 >>== \(s2, StateT v2) ->
           v2 s2
 
+-- Plus, Zero, Switch:  'lift' semantics
 instance Plus m => Plus (StateT s m) where
   StateT f  <+>  StateT g  =  StateT (\s -> f s <+> g s)
   
@@ -128,8 +132,6 @@ instance Applicative' m => Applicative' (ErrorT e m) where
   ErrorT f <*> ErrorT x = ErrorT (pure (<*>) <*> f <*> x)
 
 instance Monad' m => Monad' (ErrorT e m) where
-  -- ErrorT e m (ErrorT e m a) -> ErrorT e m a
-  -- m (Either e (m (Either e a))) -> m (Either e a)
   join =
       ErrorT                 .
       fmap join              .
@@ -138,18 +140,14 @@ instance Monad' m => Monad' (ErrorT e m) where
       fmap (fmap getErrorT)  .
       getErrorT
 
+-- Plus, Zero, Switch:  'lift' semantics
 instance Plus m => Plus (ErrorT e m) where
-  -- m (Either e a) -> m (Either e a) -> m (Either e a)
   ErrorT l  <+>  ErrorT r  =  ErrorT (l <+> r)
   
 instance Zero m => Zero (ErrorT e m) where
   zero = ErrorT zero
 
 instance Switch m => Switch (ErrorT e m) where
-  -- m (Either e a) -> m (Either e ())
-  -- switch $ Just (Left  e) = Nothing
-  -- switch $ Just (Right r) = Nothing
-  -- switch $ Nothing        = Just (Right ())
   switch (ErrorT e) =  ErrorT (fmap Right $ switch e)
 
 
@@ -172,6 +170,7 @@ instance Monad' m => Monad' (MaybeT m) where
       fmap (fmap getMaybeT)  .
       getMaybeT
 
+-- Plus, Zero, Switch:  deal with them here
 instance Monad' m => Plus (MaybeT m) where
   MaybeT l  <+>  MaybeT r  =  MaybeT x
     where

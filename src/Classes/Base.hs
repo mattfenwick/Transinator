@@ -7,6 +7,7 @@ module Classes.Base (
   , (<*>)
   , (<*)
   , (*>)
+  , liftA2
   
   , Monad'
   , join
@@ -21,6 +22,7 @@ module Classes.Base (
   
   , Zero
   , zero
+  , guard
   
   , Switch
   , switch
@@ -45,6 +47,9 @@ l <* r = pure const <*> l <*> r
 (*>) :: Applicative' f => f a -> f b -> f b
 l *> r = pure (flip const) <*> l <*> r
   
+liftA2 :: Applicative' f => (a -> b -> c) -> f a -> f b -> f c
+liftA2 f x y = pure f <*> x <*> y
+  
 class Applicative' m => Monad' m where
   join :: m (m a) -> m a
   
@@ -55,16 +60,20 @@ m >>== f = join (fmap f m)
 class Plus f where
   (<+>) :: f a -> f a -> f a
   
--- left zero:   zero  <+>    a   =  a
--- right zero:   b    <+>  zero  =  b
-class Plus f => Zero f where
-  zero :: f a
-
 many0 :: (Applicative' f, Plus f) => f a -> f [a]
 many0 p = many1 p <+> pure []
 
 many1 :: (Applicative' f, Plus f) => f a -> f [a]
 many1 p = pure (:) <*> p <*> many0 p
+
+-- left zero:   zero  <+>    a   =  a
+-- right zero:   b    <+>  zero  =  b
+class Plus f => Zero f where
+  zero :: f a
+
+guard :: (Pointed f, Zero f) => Bool -> f ()
+guard True = pure ()
+guard False = zero
 
 -- law 1:  switch zero     = pure ()
 -- law 2:  switch (pure _) = zero
