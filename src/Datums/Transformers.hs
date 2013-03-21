@@ -1,4 +1,4 @@
-{-# LANGUAGE UndecidableInstances, FunctionalDependencies #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Datums.Transformers (
 
     Id(..)
@@ -8,8 +8,11 @@ module Datums.Transformers (
   , StateT(..)
   
   , ErrorT(..)
+  
+  , WriterT(..)
 
 ) where
+
 
 newtype Id a =
     Id {getId :: a}
@@ -23,6 +26,9 @@ newtype StateT s m a =
 
 newtype ErrorT e m a =
     ErrorT {getErrorT :: m (Either e a)}
+    
+newtype WriterT w m a =
+    WriterT {getWriterT :: m (w, a)}
 
 
 -- Show instances

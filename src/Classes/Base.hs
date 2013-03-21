@@ -13,10 +13,15 @@ module Classes.Base (
   , join
   , (>>==)
   
+  , Semigroup
+  , append
+  , Monoid'
+  , empty
+
   , Plus
   , (<+>)
   -- , sum ???
-
+  
   , many0
   , many1
   
@@ -55,6 +60,12 @@ class Applicative' m => Monad' m where
   
 (>>==) :: Monad' m => m a -> (a -> m b) -> m b
 m >>== f = join (fmap f m)
+  
+class Semigroup a where
+  append :: a -> a -> a
+  
+class Semigroup a => Monoid' a where
+  empty :: a
   
 -- associative:  a <+> (b <+> c) = (a <+> b) <+> c
 class Plus f where

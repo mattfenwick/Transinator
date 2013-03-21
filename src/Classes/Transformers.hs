@@ -5,6 +5,7 @@ module Classes.Transformers (
   , TMaybe  (..)
   , TState  (..)
   , TError  (..)
+  , TWriter (..)
   , Composer(..)
   
 ) where
@@ -26,6 +27,9 @@ class Monad' m => TState s m | m -> s where
 class Monad' m => TError e m | m -> e where
   throwE :: e -> m a
   catchE :: m a -> (e -> m a) -> m a
+  
+class Monad' m => TWriter w m | m -> w where
+  tell :: w -> m ()
 
   
 class Composer c g | c -> g where

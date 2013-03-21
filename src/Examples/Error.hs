@@ -1,5 +1,7 @@
-{-# LANGUAGE  NoMonomorphismRestriction
-            , FlexibleContexts #-}
+{-# LANGUAGE  NoMonomorphismRestriction #-}
+module Examples.Error (
+
+) where
 
 import Datums.Transformers
 import Classes.Base
@@ -8,54 +10,11 @@ import Instances.Base
 import Instances.Transformers
 
 import Parse
+import Examples.Common
 
 
 type Parser s e t a = StateT [t] (StateT s (MaybeT (ErrorT e Id))) a
 
-
-i1 :: Parser () String Char String
-i1 = commute [item, item]
-
-omg :: Parser () String Integer Float
-omg = 
-    get >>== f
-  where
-    f (y:ys) = put ys *> pure (fromInteger y)
-    f   []   = mzero
-
-    
-run p s1 s2 = getId $ getErrorT $ getMaybeT $ getStateT (getStateT p s1) s2
-
-type Token = (Char, Int, Int)
-chr  (a, _, _)  =  a
-line (_, b, _)  =  b
-col  (_, _, c)  =  c
-
-addLineCol :: [Char] -> [Token]
-addLineCol = reverse . snd . foldl f ((1, 1), [])
-  where
-    f ((line, col), ts) '\n' = ((line + 1, 1), ('\n', line, col):ts)
-    f ((line, col), ts)  c   = ((line, col + 1), (c, line, col):ts)
-
-
--- examples
--- 1. error reporting
---     - simple error messages
---     - nested messages -- i.e. stack of errors
---     - complex error info:  rest of token stream
---     - complex error info:  position
--- 2. change underlying monad
---     - Maybe: deterministic, prioritized
---     - List: non-deterministic, depth-first
---     - Logic: non-deterministic, breadth-first
--- 3. partial results (can also work for monadic parsers)
---     - global log
---     - 'local' log
---     - multiple writers for different types
---     - algebraic data type for different types
--- 4. brace matching
--- 5. miscellaneous
---     - could also show how to 'observe' backtracking using logging
 
 type Parse1 e t a = StateT [t] (MaybeT (ErrorT e Id)) a
 
@@ -100,9 +59,3 @@ block5 = fmap Block (o >>== \op -> mapError (rest <+> err) (ferr op))
     o = satisfy ((== '(') . chr)
     c = satisfy ((== ')') . chr)
     ferr (_, l, c) stack = ("unmatched (, line: " ++ show l ++ " , column: " ++ show c) : stack
-
-
--- partial results examples
-
-pgood = "(a(b)c(d)e(f)g(h))"
-pbad  = "(a(b)c(d)e(f)g(h)i"

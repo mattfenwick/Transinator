@@ -74,6 +74,12 @@ instance Traversable' (Either e) where
   
 instance Pointed [] where
   pure = (:[])
+  
+instance Semigroup [a] where
+  append = (++)
+  
+instance Monoid' [a] where
+  empty = []
 
 instance Traversable' [] where
   -- fmap f (x:xs) = f x : fmap f xs
@@ -82,10 +88,20 @@ instance Traversable' [] where
 
 
 
--- just used by the Functor instance of StateT ?????
 instance Functor ((,) w) where
-  fmap f (x, y) = (x, f y)
+  fmap f (q, y) = (q, f y)
+  
+instance Monoid' w => Pointed ((,) w) where
+  pure x = (empty, x)
+  
+instance Monoid' w => Applicative' ((,) w) where
+  (w1, f) <*> (w2, x) = (w1 `append` w2, f x)
 
+instance Monoid' w => Monad' ((,) w) where
+  join (w1, (w2, x)) = (w1 `append` w2, x)
+  
+instance Traversable' ((,) w) where
+  traverse f (q, x) =  pure (,) <*> pure q <*> f x
 
 
 
@@ -182,3 +198,32 @@ instance Monad' m => Zero (MaybeT m) where
 
 instance Monad' m => Switch (MaybeT m) where
   switch (MaybeT x) = MaybeT (fmap switch x)
+  
+  
+
+instance Functor m => Functor (WriterT w m) where
+  fmap f (WriterT x) = WriterT (fmap (fmap f) x)
+
+instance (Pointed m, Monoid' w) => Pointed (WriterT w m) where
+  pure = WriterT . pure . pure
+  
+instance (Applicative' m, Monoid' w) => Applicative' (WriterT w m) where
+  WriterT f <*> WriterT x = WriterT (pure (<*>) <*> f <*> x)
+  
+instance (Monad' m, Monoid' w) => Monad' (WriterT w m) where
+  join = 
+      WriterT                 .
+      fmap join               .
+      join                    .
+      fmap commute            .
+      fmap (fmap getWriterT)  .
+      getWriterT
+
+instance Plus m => Plus (WriterT w m) where
+  WriterT l  <+>  WriterT r  =  WriterT (l <+> r)
+  
+instance Zero m => Zero (WriterT w m) where
+  zero = WriterT zero
+  
+instance (Switch m, Monoid' w) => Switch (WriterT w m) where
+  switch (WriterT x) = WriterT (fmap (const (empty, ())) $ switch x)
